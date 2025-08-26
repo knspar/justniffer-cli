@@ -17,16 +17,20 @@ class PluginManager:
     _classes: dict[str, Any] = {}
     _logged: bool
 
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}({self._classes=})'
+
     def __init__(self, module_name: str) -> None:
         self._module_name = module_name
         self._logged = False
 
     def get_objects(self, *class_names: ClassDef) -> tuple[Any, ...]:
-        if not self._logged:
-            logger.info(f'{self.__class__.__name__} {class_names}')
-            self._logged = True
         logger.debug(f'{class_names=}')
         _classes = tuple(self.get_class_from_name(class_name) for class_name in class_names)
+        if not self._logged:
+            for class_ in _classes:
+                logger.info(f'{class_}')
+            self._logged = True
         return tuple(class_(**(kwargs or {})) for class_, kwargs in _classes)
 
     def get_class_from_name(self, class_name: ClassDef) -> tuple[type[Any], dict | None]:
@@ -62,8 +66,8 @@ T = TypeVar('T')
 class TypedPluginManager(Generic[T], PluginManager):
     _classes: dict[str, type[Any]] = {}
 
-    def get_objects(self, *class_names: ClassDef) -> tuple[T, ...]:
 
+    def get_objects(self, *class_names: ClassDef) -> tuple[T, ...]:
         return super().get_objects(*class_names)
 
     def get_class_from_name(self, class_name: ClassDef) -> tuple[type[T], dict | None]:

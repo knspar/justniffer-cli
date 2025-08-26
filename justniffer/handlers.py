@@ -12,6 +12,7 @@ from justniffer.logging import logger
 from justniffer.tls_info import parse_tls_content as get_TLSInfo, TlsRecordInfo as TLSInfo
 from justniffer.http_info import parse_http_content, DEFAULT_CHARSET
 from justniffer.ssh_info import ssh_info, extract_kexinit_info
+from justniffer.dns_info import decode_dns_over_tcp_stream, hex_to_ip
 from justniffer.formatters import get_formatter, to_str, JSONFormatter
 from justniffer.extractors import BaseExtractor, ContentExtractor, TypedContentExtractor
 from justniffer.config import load_config
@@ -134,6 +135,7 @@ class ConnectionID(Extractor):
     def value(self, connection: Connection, events: list[Event], time: float | None) -> str:
         pos_hash = hash(connection.id) % (MAX_BITS)
         return hex(pos_hash)[2:].zfill(16)
+
 
 class CloseOriginator(Extractor):
     def value(self, connection: Connection, events: list[Event], time: float | None) -> Literal['client', 'server'] | None:
@@ -285,6 +287,21 @@ class SSHInfoExtractor(TypedContentExtractor[SSHConnData]):
         return res
 
 
+class DNSInfoExtractor(ContentExtractor):
+    name = 'DNS'  # type: ignore
+
+    def value(self, connection: Connection, events: list[Event], time: float | None, request: bytes, response: bytes) -> ExtractorResponse | None:
+        (sip, sport), (dip, dport) =connection.conn
+        encoded = decode_dns_over_tcp_stream(response)
+        if encoded is None:
+            return None
+        for msg in encoded:
+            q = ' '.join(map(lambda a:a['qname'],msg['questions']))
+            a = ' '.join(map(lambda a:str((a['type'], hex_to_ip(a['rdata']))),msg['answers']))
+            return(f'{q} {a}')
+
+        return None
+
 class PlainTextExtractor(ContentExtractor):
     printable = string.digits + string.ascii_letters + string.punctuation + ' '
     name = 'UNKNOWN'  # type: ignore
@@ -392,7 +409,7 @@ class HttpInfoExtractor(ContentExtractor):
         return None
 
     def value(self, connection: Connection, events: list[Event], time: float | None, request: bytes, response: bytes) -> HttpInfo | None:
-        
+
         res = parse_http_content(request, response)
         request_obj, response_obj = res
         method = request_obj.method if request_obj else None
@@ -412,7 +429,7 @@ class HttpInfoExtractor(ContentExtractor):
         else:
             content_type = self._get_header(response_obj.headers, 'Content-Type') if response_obj else None
             http_info = HttpInfo(method=method, url=url, host=host, code=code, version=version, content_type=content_type)
-            http_info_old  = self.get_conn_attrs(connection)
+            http_info_old = self.get_conn_attrs(connection)
             if http_info_old is None:
                 self.set_conn_attrs(connection, http_info)
             return http_info
@@ -452,7 +469,7 @@ def _get_classes_def(defs: dict[str, dict | None] | None, default: tuple[ClassDe
         return default
 
 
-DEFAULT_SELECTOR_CLASSES = TLSInfoExtractor, HttpInfoExtractor, SSHInfoExtractor, PlainTextExtractor
+DEFAULT_SELECTOR_CLASSES = TLSInfoExtractor, HttpInfoExtractor, SSHInfoExtractor, DNSInfoExtractor, PlainTextExtractor
 
 
 def selectors_classes(selectors: dict[str, dict | None] | None = None) -> tuple[ClassDef, ...]:
