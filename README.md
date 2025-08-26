@@ -146,6 +146,8 @@ Selectors are key components of the `ProtocolSelector`, responsible for identify
   * `HttpInfoExtractor`
 
   * `SSHInfoExtractor`
+  
+  * `DNSInfoExtractor`
 
 * **Custom Selectors**: To use a custom selector, provide its class name. If the class resides in a different module, use the format `your_module_name:YourSelectorClass`.
 
