@@ -291,16 +291,23 @@ class DNSInfoExtractor(ContentExtractor):
     name = 'DNS'  # type: ignore
 
     def value(self, connection: Connection, events: list[Event], time: float | None, request: bytes, response: bytes) -> ExtractorResponse | None:
-        (sip, sport), (dip, dport) =connection.conn
-        encoded = decode_dns_over_tcp_stream(response)
-        if encoded is None:
-            return None
-        for msg in encoded:
-            q = ' '.join(map(lambda a:a['qname'],msg['questions']))
-            a = ' '.join(map(lambda a:str((a['type'], hex_to_ip(a['rdata']))),msg['answers']))
-            return(f'{q} {a}')
+        final_res = []
+        for content in [request, response]:
+            res = []
+            encoded = decode_dns_over_tcp_stream(content)
+            if encoded is not None:
+                for msg in encoded:
+                    q = ' '.join(map(lambda a:a['qname'],msg['questions']))
+                    a = ' '.join(map(lambda a:f"{a['type']}={hex_to_ip(a['rdata'])}",msg['answers']))
+                    info =(f'{q} {a}')
+                    res.append(info)
+            if len(res) > 0:
+                final_res.append('\n'.join(res))
 
-        return None
+        if len(final_res) > 0:
+            return ' '.join(final_res)
+        else:
+            return None
 
 class PlainTextExtractor(ContentExtractor):
     printable = string.digits + string.ascii_letters + string.punctuation + ' '
