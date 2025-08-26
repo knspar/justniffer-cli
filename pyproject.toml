@@ -5,6 +5,16 @@ description = "A Python-based command-line interface (CLI) for interacting with 
 authors = ["Oreste Notelli <oreste.notelli@plecno.com>", "Konrad Niklas Sparmann <knspar@proton.me>"]
 readme = "README.md"
 packages = [{include = "justniffer"}]
+classifiers = [
+    "Environment :: Console",
+    "Operating System :: POSIX :: Linux",
+    "Intended Audience :: System Administrators"
+    "Topic :: Internet :: Log Analysis",
+    "Topic :: Utilities",
+    "Topic :: System :: Networking",
+    "Topic :: System :: Networking :: Monitoring",
+    "Topic :: System :: Logging"
+]
 
 [tool.poetry.dependencies]
 python = "^3.10"
