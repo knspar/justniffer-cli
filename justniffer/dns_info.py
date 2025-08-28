@@ -64,7 +64,7 @@ def _parse_name(packet: bytes, offset: int) -> tuple[str, int]| None:
         end = offset + length
         if end > len(packet):
             return None
-        label = packet[offset:end].decode('ascii', errors='strict')
+        label = packet[offset:end].decode('ascii', errors='ignore')
         labels.append(label)
         offset = end
 
